@@ -7,18 +7,19 @@
 #   s.string   #=> 'other value'
 module MonitoredItems
   # A Store object is much like a hash but instead of getting an setting keys you get and set instance variables.
+  # The following examples are using methods used by the FileMonitor object, however the store object is not limited to these methods.
   #
   # Example:
   #
-  #   s = MonitoredItems.Store.new
-  #   s.cool = true   #=> true
-  #   s.silly 'not!'  #=> "not!"
-  #   s.cool          #=> true
-  #   s.silly         #=> "not!"
+  #   s = MonitoredItems::Store.new
+  #   s.path = '/tmp'                       # => "/tmp"
+  #   s.callback Proc.new {'Hello World'}   # => #<Proc:0x0000000100317508@(irb):18>
+  #   s.callback.call                       # => "Hello World"
+  #   s.path                                # => "/tmp"
   #
   #   # OR send a hash when initializing the store
-  #   i = MonitoredItems.Store.new({:cool => true})
-  #   i.cool          #=> true
+  #   i = MonitoredItems::Store.new({:path => '/tmp'})
+  #   i.path          #=> "/tmp"
   class Store 
     # Supports initialization with a hash of methods & values.  It makes no difference if 
     # the keys of the hash are strings or symbols, but they are case sensitive.
