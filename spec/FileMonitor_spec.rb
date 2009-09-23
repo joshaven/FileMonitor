@@ -84,6 +84,20 @@ describe "FileMonitor" do
     puts "Time to halt: #{Time.now-t}"
     `ps -p #{fm.spawn} -o 'pid ppid'|grep ^[0-9]`.split().should be_empty
   end
+
+  # need to finish:
+  # it 'should setup & spawn using the when_modified class method' do
+  #   fm = FileMonitor.when_modified(Dir.pwd, "/path/to/other/file.rb") do |watched_item| 
+  #     true
+  #   end
+  # end
+  
+  # it 'should accept callbacks with different numbers of proc arities' do
+  #   fm = FileMonitor.new {true}
+  #   fm = FileMonitor.new {|watched_item| true}
+  #   fm = FileMonitor.new {|watched_item, file_monitor| true}
+  #   fm = FileMonitor.new {|watched_item, file_monitor, new_digest| true}
+  # end
   
   
 end
