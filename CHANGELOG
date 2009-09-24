@@ -1,4 +1,13 @@
-=== 0.0.2 2009-09-15
+=== 0.0.3 2009-09-24
+* Major Enhancements:
+  * Accept regexp filter when adding files:   fm.add(path, regexp=/.*/, &block)
+* Minor changes
+  * Change this file from History.txt to CHANGELOG
+  * Remove unused options hash from the process method
+  * Remove script/generate script/console, script/destroy & Rakefile from gem
+  * Fixup filemonitor.gemspec to work for github gem creation
+
+=== 0.0.2 2009-09-24
 
 * Major Enhancements:
   * Various API Changes!
