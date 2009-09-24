@@ -5,10 +5,14 @@
 
 === 0.0.2 2009-09-15
 
-* 1 major enhancement:
+* major enhancements:
   * API Changs: 
     - Add when_modified method which accepts one or more strings that represent files or directories and a proc callback
       ie: FileMonitor.when_modified(Dir.pwd, "other/file.rb") do |filename| ... end
     - FileMonitor when initialized with a proc can have a global proc, and procs set on individual files override the default callback
-  * Testing!  Oh yah!
-  * Reduced I/O load: Updated method of saving old file state.
+    - other minor changes like index_of returning the index of the monitored file
+  * RSpec Testing!  Oh yah!
+  * Reduced I/O load: Updated method of saving old file state. (if the file is changed and rechecked within a second then it won't be noticed)
+  * RDocs! Oh yah!
+  * Handle duplicates file entries by overwriting the old watched_item with the new one
+  * Add start / stop & halt methods for handling spawns

@@ -5,7 +5,11 @@
 
 ## DESCRIPTION
 
-Watches the file system for changes.
+Watches the file system for changes.  
+
+## Notice
+This project has only been tested on posix compatible systems, sorry for
+you windows users.  If you get this to run under windows, let me know and I'll release a windows compatible version.
 
 ## Usage
     require 'filemonitor'

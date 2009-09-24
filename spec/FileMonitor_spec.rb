@@ -14,25 +14,37 @@ describe "FileMonitor" do
   
   it 'should support adding files' do
     fm = FileMonitor.new
-    fm.watching.size.should == 0
+    fm.watched.size.should == 0
     (fm << @app_root + '/lib/FileMonitor.rb').should be_true  # Should add single file using the '<<' method
-    fm.watching.size.should == 1
+    fm.watched.size.should == 1
     (fm.add @app_root + '/lib/FileMonitor/store.rb').should be_true  # Should add single file using the 'add' method
-    fm.watching.size.should == 2
+    fm.watched.size.should == 2
   end
   
   it 'should add files recursively when given a directory as a path' do
     fm = FileMonitor.new
-    fm.watching.size.should == 0
+    fm.watched.size.should == 0
     fm.add(@app_root + '/lib').should be_true  # Should add single file
-    fm.watching.size.should > 1
+    fm.watched.size.should > 1
+  end
+  
+  it 'should respond to index_of' do
+    fm = FileMonitor.new
+    fm.add(@app_root + '/lib').should be_true  # Should add single file
+    fm.watched.size.should > 1
+    fm.index_of(@app_root + '/lib/FileMonitor.rb').should < fm.index_of(@app_root + '/lib/FileMonitor/store.rb')
+    fm.index_of(@app_root + '/lib/not_here.txt').should be_false
   end
   
   it 'should support a FileMonitor object level callback' do
-    FileMonitor.new {|i| puts i}.should be_true
-    FileMonitor.new {|i,j| puts i}.should be_true
-    FileMonitor.new {|i,j,x| puts i}.should be_true
-    # fm.add(@app_root + '/lib/FileMonitor.rb').should be_true  # Should add single file
+    fm = FileMonitor.new {true}
+    fm.callback.arity.should == -1
+    
+    fm = FileMonitor.new {|watched_item| true}
+    fm.callback.arity.should == 1
+    
+    fm = FileMonitor.new {|watched_item, file_monitor| true}
+    fm.callback.arity.should == 2
   end
   
   it 'should support adding files with individual callbacks' do
@@ -41,18 +53,17 @@ describe "FileMonitor" do
     fm = FileMonitor.new &proc1
     (fm << @app_root + '/lib/FileMonitor.rb').should be_true  # Should add single file
     (fm.add @app_root + '/lib/FileMonitor/store.rb', &proc2).should be_true  # Should add single file
-    fm.watching.first.callback.should be_nil
-    fm.watching.last.callback.should == proc2
-    fm.watching.last.callback.should_not == proc1
+    fm.watched.first.callback.should be_nil
+    fm.watched.last.callback.should == proc2
+    fm.watched.last.callback.should_not == proc1
   end
   
   it 'should overwrite existing file watches with successive additions' do
     fm = FileMonitor.new
-    fm.watching.size.should == 0
+    fm.watched.size.should == 0
     (fm << @app_root + '/lib/FileMonitor.rb').should be_true  # Should add single file
     (fm << @app_root + '/lib/FileMonitor.rb').should be_true  # Should add single file
-    fm.watching.size.should == 1
-    
+    fm.watched.size.should == 1
   end
   
   it 'should spawn processes' do
@@ -85,19 +96,77 @@ describe "FileMonitor" do
     `ps -p #{fm.spawn} -o 'pid ppid'|grep ^[0-9]`.split().should be_empty
   end
 
-  # need to finish:
-  # it 'should setup & spawn using the when_modified class method' do
-  #   fm = FileMonitor.when_modified(Dir.pwd, "/path/to/other/file.rb") do |watched_item| 
-  #     true
-  #   end
-  # end
+  it 'should setup & spawn using the when_modified class method' do
+    fm = FileMonitor.when_modified(Dir.pwd, "/path/to/other/file.rb") {|watched_item| true}
+    fm.callback.arity.should == 1
+    fm.pid.should > 1
+    fm.pid.should == fm.spawn
+  end
+
+  it 'should run callback on change' do
+    changed_files = nil
+    filename = @app_root + '/spec/temp.txt'
+    File.open(filename, 'w') {|f| f.write('hello') }
+    
+    fm = FileMonitor.new() {|watched_item| changed_files = watched_item.path}
+    fm << filename
+    
+    original = fm.watched.first.digest
+    sleep 1
+    File.open(filename, 'w') {|f| f.write('hello world') }
+    fm.process
+    fm.watched.first.digest.should_not == original
+    File.delete filename
+  end
   
-  # it 'should accept callbacks with different numbers of proc arities' do
-  #   fm = FileMonitor.new {true}
-  #   fm = FileMonitor.new {|watched_item| true}
-  #   fm = FileMonitor.new {|watched_item, file_monitor| true}
-  #   fm = FileMonitor.new {|watched_item, file_monitor, new_digest| true}
-  # end
+  it 'should use item callback if possible, otherwise object callback' do
+    @global_callback = []
+    @files_callback = []
+    file1 = @app_root + '/spec/temp1.txt'
+    file2 = @app_root + '/spec/temp2.txt'
+    file3 = @app_root + '/spec/temp3.txt'
+    
+    [file1,file2,file3].each {|file| File.open(file, 'w') {|f| f.write('hello') }}
+    
+    fm = FileMonitor.new() {|watched_item| @global_callback << watched_item.path }
+    fm << file1
+    fm.add(file2) {|watched_item| @files_callback << watched_item.path }
+    fm << file3
+    
+    sleep 1
+    [file1,file2,file3].each {|file| File.open(file, 'w') {|f| f.write('Hello World') }}
+    fm.process
+    
+    @global_callback.should == [file1,file3]
+    @files_callback.should == [file2]
+    [file1,file2,file3].each {|file| File.delete(file)}
+  end
   
+  it 'should have access to local, FileMonitor & Store contexts' do
+    filename = @app_root + '/spec/temp.txt'
+    File.open(filename, 'w') {|f| f.write('hello') }
+    
+    fm = FileMonitor.new() do |watched_item, file_monitor| 
+      MonitoredItems::Store.should === watched_item
+      Spec::Example::ExampleGroup::Subclass_1.should === self
+      FileMonitor.should === file_monitor
+    end
+    fm << filename
+    sleep 1
+    File.open(filename, 'w') {|f| f.write('hello world') }
+    fm.process
+    
+    File.delete filename
+  end
   
+  it 'should handel missing files without throwing errors' do
+    filename = @app_root + '/spec/temp.txt'
+    File.open(filename, 'w') {|f| f.write('hello') }
+    fm = FileMonitor.new() {true}
+    fm << filename
+    fm.process
+    File.delete(filename)
+    fm.process
+    fm.watched.first.digest.should be_nil
+  end
 end
