@@ -1,6 +1,5 @@
 require File.dirname(__FILE__) + '/FileMonitor/store'
 require 'find' # needed for the :files_recursive method
-
 # Purpose:
 # Watches the file system for changes
 #
@@ -25,7 +24,7 @@ require 'find' # needed for the :files_recursive method
 #   # Alternatively you can do all of the above in one line:
 #   FileMonitor.when_modified(Dir.pwd, "/path/to/other/file.rb") do |watched_item| ... end
 class FileMonitor
-  VERSION = '0.0.2'
+  VERSION = '0.0.3'
   attr_accessor :callback, :pid, :watched
   # The new method may be called with an optional callback which must be a block 
   # either do...end or {...}.
@@ -71,7 +70,8 @@ class FileMonitor
   
   # The add method accepts a directory path or file path and optional callback.  If a directory path is given all files in that 
   # path are recursively added.  If a callback is given then that proc will be called when a change is detected on that file or 
-  # group of files.  If no proc is given via the add method then the object callback is called.
+  # group of files.  If no proc is given via the add method then the object callback is called.  If a regexp is given as the 
+  # second argument only files matching the regexp will be monitored.
   #
   # Example:
   #   fm = FileMonitor.new do |path|
@@ -81,17 +81,17 @@ class FileMonitor
   #   # The following will run the default callback when changes are found in the /tmp folder:
   #   fm.add '/tmp'
   #
-  #   # The following will run its own callback on changed files in the /home folder:
-  #   fm.add '/home' do |path|
+  #   # The following will run the given callback on any files ending in 'txt' in the /home folder when changed:
+  #   fm.add('/home', /txt$/) do |path|
   #     puts "A users file has changed: #{path}"
   #   end
-  def add(path, &callback)
-    if File.file? path
+  def add(path, regexp_file_filter=/.*/, &callback)
+    if File.file?(path) && regexp_file_filter === File.split(path).last
       index = index_of(path) || @watched.size
       @watched[index] = MonitoredItems::Store.new({:path=>File.expand_path(path), :callback=>callback, :digest=>digest(path)})
       return true
     elsif File.directory? path
-      files_recursive(path).each {|f| add(f, &callback) }
+      files_recursive(path).each {|f| add(f, regexp_file_filter, &callback) }
       return true
     end
     false
@@ -107,7 +107,7 @@ class FileMonitor
   #   # The following will run the default callback when changes are found in the /tmp folder:
   #   fm << '/tmp'
   def <<(path)
-    add path
+    add path, regexp_file_filter
   end
 
   # Itterates watched files and runs callbacks when changes are detected.  This is the semi-automatic way to run the FileMonitor.
@@ -117,13 +117,13 @@ class FileMonitor
   #   fm = FileMonitor.new() {|watched_item| changed_files = watched_item.path}
   #   fm << '/tmp'
   #   fm.process   # this will look for changes in any watched items only once... call this when you want to look for changes.
-  def process(options={})
+  def process
     @watched.each do |i|
       key = digest(i.path)
       # i.digest =  key if i.digest.nil?  # skip first change detection, its always unknown on first run
       
       unless i.digest == key
-        respond_to_change(i, key, options) 
+        respond_to_change(i, key) 
       end
     end
   end
@@ -235,11 +235,11 @@ private
   end
 
   # Call callback and update digest with given key.
-  def respond_to_change(item, key, options)
+  def respond_to_change(item, key)
     if Proc === item.callback     # Use watched instance callback if possible.
-      call item.callback, item, self, options
+      call item.callback, item, self
     elsif Proc === self.callback  # Use object level callback if possible.
-      call self.callback, item, self, options
+      call self.callback, item, self
     end
     item.digest(key)
   end

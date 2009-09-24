@@ -6,7 +6,7 @@ describe "FileMonitor" do
   before :all do
     @app_root = File.expand_path(File.dirname(__FILE__)+"/..")
   end
-
+  
   it 'should be able to instantize' do
     fm = FileMonitor.new
     FileMonitor.should === fm
@@ -73,7 +73,7 @@ describe "FileMonitor" do
     pid.should_not == Process.pid
     `ps -p #{fm.spawn} -o 'pid ppid'|grep ^[0-9]`.split().should == [pid.to_s, Process.pid.to_s]
   end
-
+  
   it 'should stop spawn' do
     fm = FileMonitor.new
     fm << @app_root + '/lib'
@@ -95,14 +95,14 @@ describe "FileMonitor" do
     puts "Time to halt: #{Time.now-t}"
     `ps -p #{fm.spawn} -o 'pid ppid'|grep ^[0-9]`.split().should be_empty
   end
-
+  
   it 'should setup & spawn using the when_modified class method' do
     fm = FileMonitor.when_modified(Dir.pwd, "/path/to/other/file.rb") {|watched_item| true}
     fm.callback.arity.should == 1
     fm.pid.should > 1
     fm.pid.should == fm.spawn
   end
-
+  
   it 'should run callback on change' do
     changed_files = nil
     filename = @app_root + '/spec/temp.txt'
@@ -168,5 +168,13 @@ describe "FileMonitor" do
     File.delete(filename)
     fm.process
     fm.watched.first.digest.should be_nil
+  end
+  
+  it 'should be able to use a filter when specifying files' do
+    fm = FileMonitor.new() {|watched_item| changed_files = watched_item.path}
+    fm.add(@app_root, /\.rb$/) {|f| puts "Change found in: #{f.path}"}
+    fm.watched.each do |i|
+      File.split(i.path).last.should =~ /\.rb$/
+    end
   end
 end
