@@ -15,6 +15,7 @@ $hoe = Hoe.spec 'filemonitor' do
   self.rubyforge_name       = self.name # TODO this is default value
   # self.extra_deps         = [['activesupport','>= 2.0.2']]
   self.readme_file = "README.markdown"
+  self.history_file = "CHANGELOG"
 end
 
 require 'newgem/tasks'
