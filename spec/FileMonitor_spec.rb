@@ -159,10 +159,46 @@ describe "FileMonitor" do
     File.delete filename
   end
   
+  it 'should not remove a file from the watch list if set to persistent when the file is deleted' do
+    changed_files = []
+    filename = @app_root + '/spec/temp.txt'
+    File.open(filename, 'w') {|f| f.write('Hello World') }
+
+    fm = FileMonitor.new({:persistent => true}) {|watched_item| changed_files << watched_item.path}
+    fm << filename
+
+    File.delete filename
+    File.exists?(filename).should be_false
+    fm.process.should be_true
+    fm.watched.size.should == 1
+    fm.watched.first.path.should == filename
+  end
+  
+  it 'should remove a file from the watch list if not set to persistent when the file is deleted' do
+    changed_files = []
+    filename1 = @app_root + '/spec/temp1.txt'
+    filename2 = @app_root + '/spec/temp2.txt'
+    File.open(filename1, 'w') {|f| f.write('Hello World 1') }
+    File.open(filename2, 'w') {|f| f.write('Hello World 2') }
+
+    fm = FileMonitor.new() {|watched_item| changed_files << watched_item.path}
+    fm << filename1
+    fm << filename2
+
+    fm.watched.size.should == 2
+    File.delete filename2
+    File.exists?(filename2).should be_false
+    fm.process.should be_true
+    fm.watched.size.should == 1
+    fm.watched.first.path.should == filename1
+    File.delete filename1
+  end
+  
+  
   it 'should handel missing files without throwing errors' do
     filename = @app_root + '/spec/temp.txt'
     File.open(filename, 'w') {|f| f.write('hello') }
-    fm = FileMonitor.new() {true}
+    fm = FileMonitor.new(:persistent => true) {true}
     fm << filename
     fm.process
     File.delete(filename)
@@ -177,4 +213,6 @@ describe "FileMonitor" do
       File.split(i.path).last.should =~ /\.rb$/
     end
   end
+
+
 end

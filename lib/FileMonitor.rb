@@ -48,7 +48,9 @@ class FileMonitor
   #     # clear watchme.list so we won't add all watch files every time the file changes
   #     open(watched_item) { |f| puts '' }
   #   end
-  def initialize(&callback)
+  def initialize(options={}, &callback)
+    @options=options
+    # @options[:persistent] ||= false
     @watched = []
     @callback = callback unless callback.nil?
   end
@@ -119,11 +121,17 @@ class FileMonitor
   #   fm.process   # this will look for changes in any watched items only once... call this when you want to look for changes.
   def process
     @watched.each do |i|
-      key = digest(i.path)
-      # i.digest =  key if i.digest.nil?  # skip first change detection, its always unknown on first run
+      # Unless the persistant option is set, this will remove watched file if it has been removed
+      # if the file still exists then it will be processed regardless of the persistent option.
+      unless @options[:persistent] || File.exists?(i.path) 
+        @watched.delete(i)
+      else
+        key = digest(i.path)
+        # i.digest =  key if i.digest.nil?  # skip first change detection, its always unknown on first run
       
-      unless i.digest == key
-        respond_to_change(i, key) 
+        unless i.digest == key
+          respond_to_change(i, key) 
+        end
       end
     end
   end
