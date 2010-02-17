@@ -106,7 +106,7 @@ class FileMonitor
   #
   #   # The following will run the default callback when changes are found in the /tmp folder:
   #   fm << '/tmp'
-  def <<(path)
+  def <<(path, regexp_file_filter=/.*/)
     add path, regexp_file_filter
   end
 
