@@ -2,7 +2,6 @@ module MonitoredItems #:nodoc:
   class Nothing #:nodoc:
   end
   
-  
   # A Store object is much like a hash but instead of getting an setting keys you get and set instance variables.
   # The following examples are using methods used by the FileMonitor object, however the store object is not limited to these methods.
   #
@@ -23,7 +22,7 @@ module MonitoredItems #:nodoc:
     def initialize(hsh = {})
       hsh.map {|k,v| self.send(k, v)} if Hash === hsh
     end
-    
+
     # Gets or sets instance variables based upon the methods called.
     def method_missing(mth, arg=Nothing)
       # append the @ symbol and remove the equal symbol (if exists):

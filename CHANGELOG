@@ -1,3 +1,8 @@
+=== 0.0.4 2010-02-17
+* Major Enhancements/Fixes
+  * Automatically appends watched list with new files when they are detected if the watch that was added is a directory 
+  * Removes deleted files from the watched files by default when that file is deleted, initiate the FileMonitor with :persistent=>true to override the new behavior.
+
 === 0.0.3 2009-09-24
 * Major Enhancements:
   * Accept regexp filter when adding files:   fm.add(path, regexp=/.*/, &block)

@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + '/FileMonitor/store'
+require ::File.dirname(__FILE__) + '/FileMonitor/store'
 require 'find' # needed for the :files_recursive method
 # Purpose:
 # Watches the file system for changes
@@ -28,7 +28,7 @@ class FileMonitor
   attr_accessor :callback, :pid, :watched
   # The new method may be called with an optional callback which must be a block 
   # either do...end or {...}.
-  # The block may consiste of upto arguments ie {|watched_item, monitored|}, in which case, the
+  # The block may consist of upto two arguments ie {|watched_item, monitored|}, in which case, the
   # watched_item is an instance of FileMonitor::Store and monitored is the FileMonitor instances self.
   #
   # The first argument of the block, 'watched_item' in this case, will respond to: (:path, :modified & :callback).
@@ -36,23 +36,22 @@ class FileMonitor
   # 
   # Example:
   #   FileMonitor.new do |watched_item|
-  #     puts "I am watched this file: #{watched_item.path}"
-  #     puts "When I find a change I will call watched_item.callback"
+  #     puts "My file name & path is: #{watched_item.path}"
+  #     puts "When I find a change I will call watched_item.callback which displays this text."
   #   end
   #
   #   FileMonitor.new do |watched_item, monitored|
-  #
-  #     # add files from a file that is a list of files to watch... Note: There
+  #     # Add files from a file that is a list of files to watch... Note: There
   #     IO.readlines(watched_item.path).each {|file| monitored << file } if watched_item.path == '/path/to/file/watchme.list'
-  #
-  #     # clear watchme.list so we won't add all watch files every time the file changes
-  #     open(watched_item) { |f| puts '' }
+  #     # Clear watchme.list so we won't add all watch files every time the file changes
+  #     open(watched_item) { |f| puts "This is the callback that is run..." }
   #   end
   def initialize(options={}, &callback)
     @options=options
     # @options[:persistent] ||= false
     @watched = []
     @callback = callback unless callback.nil?
+    @options[:rescan_files] ||= true
   end
   
   # Returns a spawned FileMonitor instance.  The independent process automatically calls the given
@@ -88,11 +87,11 @@ class FileMonitor
   #     puts "A users file has changed: #{path}"
   #   end
   def add(path, regexp_file_filter=/.*/, &callback)
-    if File.file?(path) && regexp_file_filter === File.split(path).last
+    if ::File.file?(path) && regexp_file_filter === ::File.split(path).last
       index = index_of(path) || @watched.size
-      @watched[index] = MonitoredItems::Store.new({:path=>File.expand_path(path), :callback=>callback, :digest=>digest(path)})
+      @watched[index] = MonitoredItems::Store.new({:path=>::File.expand_path(path), :callback=>callback, :digest=>digest(path)})
       return true
-    elsif File.directory? path
+    elsif ::File.directory? path
       files_recursive(path).each {|f| add(f, regexp_file_filter, &callback) }
       return true
     end
@@ -120,10 +119,17 @@ class FileMonitor
   #   fm << '/tmp'
   #   fm.process   # this will look for changes in any watched items only once... call this when you want to look for changes.
   def process
+    directories.each do |d| 
+      # FIXME: this is somehow an endless loop when adding a directory
+      # puts "working on dir: #{d}"
+      # add d
+      # puts "done with add"
+    end if @options[:rescan_files]
+
     @watched.each do |i|
       # Unless the persistant option is set, this will remove watched file if it has been removed
       # if the file still exists then it will be processed regardless of the persistent option.
-      unless @options[:persistent] || File.exists?(i.path) 
+      unless @options[:persistent] || ::File.exists?(i.path) 
         @watched.delete(i)
       else
         key = digest(i.path)
@@ -236,6 +242,9 @@ class FileMonitor
     end
   end
   
+  def directories #:nodoc:
+    @directories ||= []
+  end
 private
   # Returns true or false
   def process_running?
@@ -271,7 +280,7 @@ private
   # Returns a string representation of the file state.
   def digest(file)
     begin
-      File.mtime(file).to_f
+      ::File.mtime(file).to_f
     rescue Errno::ENOENT
       nil
     end
@@ -285,7 +294,8 @@ private
     
     Find.find(dirname) do |path|
       if FileTest.directory?(path)
-        Find.prune if File.basename(path)[0] == ?. # Don't look any further into directies beginning with a dot.
+        directories << ::File.expand_path(path)
+        ::Find.prune if ::File.basename(path)[0] == ?. # Don't look any further into directies beginning with a dot.
       else
         paths << path if file_name_regexp === path # Amend the return array if the file found matches the regexp
       end
