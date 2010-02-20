@@ -51,7 +51,7 @@ class FileMonitor
     # @options[:persistent] ||= false
     @watched = []
     @callback = callback unless callback.nil?
-    @options[:rescan_files] ||= true
+    @options[:rescan_directories] ||= true
   end
   
   # Returns a spawned FileMonitor instance.  The independent process automatically calls the given
@@ -87,13 +87,17 @@ class FileMonitor
   #     puts "A users file has changed: #{path}"
   #   end
   def add(path, regexp_file_filter=/.*/, &callback)
+    # path = ::File.expand_path(path)
     if ::File.file?(path) && regexp_file_filter === ::File.split(path).last
-      index = index_of(path) || @watched.size
+      # Bail out if the file is already being watched.
+      return true if index_of(path) 
+      index = @watched.size
       @watched[index] = MonitoredItems::Store.new({:path=>::File.expand_path(path), :callback=>callback, :digest=>digest(path)})
       return true
     elsif ::File.directory? path
       files_recursive(path).each {|f| add(f, regexp_file_filter, &callback) }
       return true
+    else
     end
     false
   end
@@ -119,12 +123,7 @@ class FileMonitor
   #   fm << '/tmp'
   #   fm.process   # this will look for changes in any watched items only once... call this when you want to look for changes.
   def process
-    directories.each do |d| 
-      # FIXME: this is somehow an endless loop when adding a directory
-      # puts "working on dir: #{d}"
-      # add d
-      # puts "done with add"
-    end if @options[:rescan_files]
+    scan_directories if @options[:rescan_directories]
 
     @watched.each do |i|
       # Unless the persistant option is set, this will remove watched file if it has been removed
@@ -200,17 +199,17 @@ class FileMonitor
   #   fm << @app_root + '/lib'
   #   fm.spawn        # and now its doing its job... 
   def spawn(interval = 1)
-    if pid.nil? 
+    if @pid.nil? 
       @pid = fork {monitor interval}
       Process.detach(pid)
       
       Kernel.at_exit do
         # sends the kill command unless the pid is not found on the system
-        Process.kill('HUP', pid) if process_running?
-        pid = nil
+        Process.kill('HUP', @pid) if process_running?
+        @pid = nil
       end
     end
-    pid
+    @pid
   end
   alias_method :start, :spawn
   # Stops a spawned FileMonitor instance.  The FileMonitor will finish the the currnet iteration and exit gracefully.  See Also: Halt
@@ -294,7 +293,7 @@ private
     
     Find.find(dirname) do |path|
       if FileTest.directory?(path)
-        directories << ::File.expand_path(path)
+        directories <<  MonitoredItems::Store.new({:path => ::File.expand_path(path), :file_name_regexp => file_name_regexp})
         ::Find.prune if ::File.basename(path)[0] == ?. # Don't look any further into directies beginning with a dot.
       else
         paths << path if file_name_regexp === path # Amend the return array if the file found matches the regexp
@@ -302,5 +301,17 @@ private
     end
     
     return paths
+  end
+  
+  # Attempts to add all files in all watched directories that match the watching filter, the add method is responcibale 
+  # for managing duplicates.
+  def scan_directories
+    self.directories.each do |stored_directory|
+      ::Dir.new(stored_directory.path).each do |file|
+        unless file == '.' || file == '..'
+          add(::File.join(stored_directory.path, file)) if stored_directory.file_name_regexp===file
+        end
+      end
+    end
   end
 end
