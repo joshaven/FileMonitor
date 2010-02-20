@@ -222,9 +222,9 @@ class FileMonitor
     # Send user defined signal USR1 to process.  This is trapped in spauned processes and tells the process to Ctrl+C
     # The user defined signial is sent as a safty percausion because the process id is not tracked through a pid file
     # nor compared with the running command.  The FileMonitor spaun will respond to the USR1 signal by exiting properly.*
-    if Fixnum === pid
-      Process.kill('USR1', pid)
-      Process.wait pid
+    if Fixnum === @pid
+      Process.kill('USR1', @pid)
+      Process.wait @pid
     end
   end
   
@@ -235,9 +235,9 @@ class FileMonitor
   #   fm.spawn        # and now its doing its job... 
   #   fm.stop
   def halt()
-    if Fixnum === pid
-      Process.kill('USR2', pid)
-      Process.wait pid
+    if Fixnum === @pid
+      Process.kill('USR2', @pid)
+      Process.wait @pid
     end
   end
   
