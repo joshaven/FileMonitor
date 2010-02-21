@@ -1,3 +1,9 @@
+# TODO
+## Issues
+* The process doesn't end when exit is typed in an irb session.  It does, however exit when Ctrl+C 
+  is pressed in an irb session. This can be observed by running `ps -A|grep irb` in an alternate window.
+
+## General
 * Add a per directory seconds-between-scans setting so that it isn't possible for a 
   directory to be scanned for changes 1,000,000 times a second or some crazy such thing.
 * remove file\_name\_regexp & callback variables from the :files\_recursive method.  The
