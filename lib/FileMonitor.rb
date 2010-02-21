@@ -50,7 +50,7 @@ class FileMonitor
     @options=options
     # @options[:persistent] ||= false
     @watched = []
-    @callback = callback unless callback.nil?
+    @callback = callback if callback.is_a? Proc
     @options[:rescan_directories] ||= true
   end
   
@@ -87,6 +87,7 @@ class FileMonitor
   #     puts "A users file has changed: #{path}"
   #   end
   def add(path, regexp_file_filter=/.*/, &callback)
+    callback = @callback unless callback.is_a? Proc
     # path = ::File.expand_path(path)
     if ::File.file?(path) && regexp_file_filter === ::File.split(path).last
       # Bail out if the file is already being watched.
@@ -95,7 +96,9 @@ class FileMonitor
       @watched[index] = MonitoredItems::Store.new({:path=>::File.expand_path(path), :callback=>callback, :digest=>digest(path)})
       return true
     elsif ::File.directory? path
-      files_recursive(path).each {|f| add(f, regexp_file_filter, &callback) }
+      files_recursive(path, regexp_file_filter, &callback).each do |f| 
+        add f, regexp_file_filter, &callback
+      end
       return true
     else
     end
@@ -288,12 +291,12 @@ private
   # Returns an array of all files in dirname recursively.  Accepts an optional file name regexp filter.
   # The following will find files ending in ".rb" recursively beginning in the working dir:
   #   files_recursive Dir.pwd, /\.rb$/
-  def files_recursive(dirname, file_name_regexp=/.*/)
+  def files_recursive(dirname, file_name_regexp=/.*/, &callback)
     paths = []
     
     Find.find(dirname) do |path|
       if FileTest.directory?(path)
-        directories <<  MonitoredItems::Store.new({:path => ::File.expand_path(path), :file_name_regexp => file_name_regexp})
+        directories <<  MonitoredItems::Store.new({:path => ::File.expand_path(path), :file_name_regexp => file_name_regexp, :callback=>callback})
         ::Find.prune if ::File.basename(path)[0] == ?. # Don't look any further into directies beginning with a dot.
       else
         paths << path if file_name_regexp === path # Amend the return array if the file found matches the regexp
@@ -306,10 +309,13 @@ private
   # Attempts to add all files in all watched directories that match the watching filter, the add method is responcibale 
   # for managing duplicates.
   def scan_directories
-    self.directories.each do |stored_directory|
-      ::Dir.new(stored_directory.path).each do |file|
+    self.directories.each do |dir|
+      ::Dir.new(dir.path).each do |file|
         unless file == '.' || file == '..'
-          add(::File.join(stored_directory.path, file)) if stored_directory.file_name_regexp===file
+          if dir.file_name_regexp===file
+            puts dir.callback.class
+            add ::File.join(dir.path, file), dir.file_name_regexp, &dir.callback
+          end
         end
       end
     end

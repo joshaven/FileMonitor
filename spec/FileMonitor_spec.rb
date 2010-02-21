@@ -51,9 +51,8 @@ describe "FileMonitor" do
     fm = FileMonitor.new &proc1
     (fm << @app_root + '/lib/FileMonitor.rb').should be_true  # Should add single file
     (fm.add @app_root + '/lib/FileMonitor/store.rb', &proc2).should be_true  # Should add single file
-    fm.watched.first.callback.should be_nil
+    fm.watched.first.callback.should == proc1
     fm.watched.last.callback.should == proc2
-    fm.watched.last.callback.should_not == proc1
   end
   
   it 'should not duplicate files' do
@@ -69,7 +68,7 @@ describe "FileMonitor" do
   it 'should spawn processes' do
     fm = FileMonitor.new
     @app_root = "/Users/joshaven/projects/FileMonitor"
-
+  
     fm << @app_root + '/lib'
     pid = fm.spawn
     pid.should_not == Process.pid
@@ -242,5 +241,44 @@ describe "FileMonitor" do
     # Cleanup
     File.delete filename
     Dir.delete testing_dir
+  end
+  
+  it 'should not crawl through directories when a file is specified' do
+    fm = FileMonitor.new
+    fm.add(File.join(@app_root, 'CHANGELOG'))
+    fm.directories.should be_empty  
+  end
+
+  it 'should crawl through directories looking for files when a directory is specified' do
+    fm = FileMonitor.new
+    fm.add(@app_root, /.*\.rb/)
+    fm.directories.size.should > 5  
+  end
+  
+  it 'should not loose the regexp filter when storing watched directories' do
+    fm = FileMonitor.new
+    fm.add(@app_root, /.*\.rb/)
+    fm.directories.each {|d| d.file_name_regexp.should == /.*\.rb/}
+  end
+  
+  it 'should not have inflating directories' do
+    fm = FileMonitor.new
+    fm.add(@app_root, /.*\.rb/)
+    start = fm.directories.size
+    fm.process
+    fm.directories.size.should == start
+  end
+  
+  it 'should not loose callbacks' do
+    puts "<br />Starting should not loose callbacks test<br /><br />"
+    callback = Proc.new {return "hello from callback"}
+    fm = FileMonitor.new &callback
+    
+    fm.add @app_root, /.*\.rb/
+    
+    fm.directories.size.should > 1
+    fm.directories.each {|dir| dir.callback.should == callback}
+    fm.watched.size.should > 1
+    fm.watched.each {|file| file.callback.should == callback}
   end
 end
