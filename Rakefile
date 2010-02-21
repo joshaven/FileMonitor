@@ -12,8 +12,7 @@ Hoe.plugin :newgem
 # Run 'rake -T' to see list of generated tasks (from gem root directory)
 $hoe = Hoe.spec 'filemonitor' do
   self.developer 'Joshaven Potter', 'yourtech@gmail.com'
-  self.rubyforge_name       = self.name # TODO this is default value
-  # self.extra_deps         = [['activesupport','>= 2.0.2']]
+  self.rubyforge_name = self.name # TODO this is default value
   self.readme_file = "README.markdown"
   self.history_file = "CHANGELOG"
 end

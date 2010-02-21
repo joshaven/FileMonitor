@@ -24,7 +24,7 @@ require 'find' # needed for the :files_recursive method
 #   # Alternatively you can do all of the above in one line:
 #   FileMonitor.when_modified(Dir.pwd, "/path/to/other/file.rb") do |watched_item| ... end
 class FileMonitor
-  VERSION = '0.0.3'
+  VERSION = '0.0.4'
   attr_accessor :callback, :pid, :watched
   # The new method may be called with an optional callback which must be a block 
   # either do...end or {...}.

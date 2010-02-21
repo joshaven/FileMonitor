@@ -2,17 +2,17 @@
 
 Gem::Specification.new do |s|
   s.name = %q{filemonitor}
-  s.version = "0.0.3"
+  s.version = "0.0.4"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Joshaven Potter"]
-  s.date = %q{2009-09-24}
+  s.date = %q{2010-02-20}
   s.description = %q{}
   s.email = ["yourtech@gmail.com"]
   s.extra_rdoc_files = ["Manifest.txt"]
   s.files = ["CHANGELOG", "Manifest.txt", "README.markdown", "lib/FileMonitor.rb", "lib/FileMonitor/store.rb", "spec/FileMonitor_spec.rb", "spec/MonitoredItem_spec.rb", "spec/spec.opts", "spec/spec_helper.rb", "tasks/rspec.rake", "tasks/rdoc.rake"]
-  s.homepage = %q{http://filemonitor.rubyforge.org/}
-  s.rdoc_options = ["--main", "README.markdown"]
+  s.homepage = %q{http://github.com/joshaven/FileMonitor/}
+  # s.rdoc_options = ["--main", "README.markdown"]
   s.require_paths = ["lib"]
   s.rubyforge_project = %q{filemonitor}
   s.rubygems_version = %q{1.3.5}
